@@ -1,0 +1,29 @@
+[package]
+name = "singing-cells"
+version = "0.1.0"
+authors = ["dominicmkennedy <dominicmkennedy@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+js-sys = "0.3.60"
+wasm-bindgen = "0.2.83"
+
+[dependencies.web-sys]
+version = "0.3.4"
+features = [
+  'Document',
+  'Element',
+  'HtmlCanvasElement',
+  'WebGlBuffer',
+  'WebGlVertexArrayObject',
+  'WebGl2RenderingContext',
+  'WebGlProgram',
+  'WebGlShader',
+  'Window',
+]
+
+[profile.release]
+lto = "thin"
