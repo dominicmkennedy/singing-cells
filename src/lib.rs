@@ -1,6 +1,3 @@
-const UNIVERSE_WIDTH: usize = 16;
-const MAX_TIME_STEPS: usize = 32;
-const NUM_CELL_TYPES: u8 = 10;
 const COLORS: [[f32; 4]; 10] = [
     [0.0, 0.0, 0.0, 1.0],
     [0.0, 1.0, 0.0, 1.0],
@@ -14,9 +11,35 @@ const COLORS: [[f32; 4]; 10] = [
     [0.7, 0.1, 0.2, 1.0],
 ];
 
+const VERT_SHADER: &str = r##"#version 300 es
+    in vec4 position;
+    in vec4 cellType;
+
+    out vec4 fragColor;
+
+    void main() {
+        fragColor = cellType;
+        gl_Position = position;
+    }
+    "##;
+
+const FRAG_SHADER: &str = r##"#version 300 es
+    precision highp float;
+
+    in vec4 fragColor;
+
+    out vec4 outColor;
+        
+    void main() {
+        outColor = fragColor;
+    }
+    "##;
+
 mod utils;
 
+use itertools::Itertools;
 use js_sys::{Math::random, WebAssembly};
+use std::collections::BTreeSet;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
@@ -27,12 +50,19 @@ macro_rules! log {
 }
 
 fn gen_init_cells(n: u8, width: usize) -> Vec<u8> {
-    vec![0; width].iter().map(|&_| gen_range(0, n)).collect()
+    (0..width).map(|_| gen_range(0, n)).collect()
 }
 
-fn gen_rule_table(n: u8, width: usize) -> Vec<u8> {
-    let mut table: Vec<u8> = vec![0; width].iter().map(|&_| gen_range(1, n)).collect();
-    table[0] = 0;
+fn gen_rule_table(n: u8, width: usize, rule_density: f32) -> Vec<u8> {
+    let mut table: Vec<u8> = (0..width).map(|_| gen_range(1, n)).collect();
+
+    let mut to_remove: BTreeSet<usize> = BTreeSet::new();
+    while to_remove.len() != ((width as f32) * (1.0 - rule_density)) as usize {
+        to_remove.insert(gen_range(0, width as u8) as usize);
+    }
+    
+    to_remove.iter().for_each(|&x| table[x] = 0);
+
     table
 }
 
@@ -43,55 +73,58 @@ fn gen_range(low: u8, high: u8) -> u8 {
 }
 
 // next step function
-// consider using a more functional approch for the new state
-fn next_generation(rule_table: &Vec<u8>, old_state: &Vec<u8>, new_state: &mut Vec<u8>) {
-    let len = new_state.len();
+fn next_generation(rule_table: &Vec<u8>, cell_board: &mut Vec<Vec<u8>>) {
+    cell_board.rotate_left(1);
+    let time_steps = cell_board.len();
 
-    for i in 0..len {
-        let tot =
-            usize::from(old_state[i] + old_state[(i + 1) % len] + old_state[((i + len) - 1) % len]);
-        new_state[i] = rule_table[tot];
-    }
+    let mut old_state = cell_board[time_steps - 2].clone();
+    old_state.rotate_right(1);
+    let new_state_iter = cell_board[time_steps - 1].iter_mut();
+
+    old_state
+        .iter()
+        .circular_tuple_windows::<(_, _, _)>()
+        .zip(new_state_iter)
+        .for_each(|((x, y, z), s)| *s = rule_table[(x + y + z) as usize]);
 }
 
-fn ca(universe_width: usize, max_time_steps: usize, num_cell_types: u8) -> Vec<f32> {
+fn ca(
+    universe_width: usize,
+    max_time_steps: usize,
+    num_cell_types: u8,
+    rule_density: f32,
+) -> Vec<f32> {
     let rule_table_width: usize = (((num_cell_types as usize) - 1) * 3) + 1;
 
     // rule table
-    let rule_table = gen_rule_table(num_cell_types, rule_table_width);
+    let rule_table = gen_rule_table(num_cell_types, rule_table_width, rule_density);
+    log!("rules: {:?}", rule_table);
 
-    // initial cells
-    let init_cells = gen_init_cells(num_cell_types, universe_width);
+    let cell_board: &mut Vec<Vec<u8>> = &mut vec![vec![0; universe_width]; max_time_steps];
+    cell_board[max_time_steps - 1] = gen_init_cells(num_cell_types, universe_width);
 
-    // blank cell board
-    let mut cell_board = vec![vec![0; universe_width]; max_time_steps];
-
-    // advance time steps
-    let mut prev_row = &init_cells;
-    for next_row in cell_board.iter_mut() {
-        next_generation(&rule_table, prev_row, next_row);
-        prev_row = next_row;
-    }
+    (0..max_time_steps - 1).for_each(|_| next_generation(&rule_table, cell_board));
 
     // return results as verts and colors
-    cell_colors(&cell_board)
+    cell_colors(cell_board)
 }
 
-// rewrite better, this is hidious
-fn cell_verts(num_verts: usize) -> Vec<f32> {
+// rewrite; this is hidious
+fn cell_verts(universe_width: usize, time_steps: usize) -> Vec<f32> {
+    let num_verts: usize = universe_width * time_steps * 2 * 3 * 2;
     let mut vertices = vec![0.0; num_verts];
 
-    const CELL_WIDTH: f32 = 2.0 / (UNIVERSE_WIDTH as f32);
-    const CELL_HEIGHT: f32 = 2.0 / (MAX_TIME_STEPS as f32);
+    let cell_width_px: f32 = 2.0 / (universe_width as f32);
+    let cell_height_px: f32 = 2.0 / (time_steps as f32);
 
-    for i in 0..MAX_TIME_STEPS {
-        for j in 0..UNIVERSE_WIDTH {
-            let idx = (i + (j * MAX_TIME_STEPS)) * 12;
-            let x0 = ((j as f32) * CELL_WIDTH) - 1.0;
-            let x1 = (((j + 1) as f32) * CELL_WIDTH) - 1.0;
+    for i in 0..time_steps {
+        for j in 0..universe_width {
+            let idx = (i + (j * time_steps)) * 12;
+            let x0 = ((j as f32) * cell_width_px) - 1.0;
+            let x1 = (((j + 1) as f32) * cell_width_px) - 1.0;
 
-            let y0 = (((MAX_TIME_STEPS - i) as f32) * CELL_HEIGHT) - 1.0;
-            let y1 = ((((MAX_TIME_STEPS - i) - 1) as f32) * CELL_HEIGHT) - 1.0;
+            let y0 = (((time_steps - i) as f32) * cell_height_px) - 1.0;
+            let y1 = ((((time_steps - i) - 1) as f32) * cell_height_px) - 1.0;
             // triangle 1
             vertices[idx + 0] = x0; //x0
             vertices[idx + 1] = y0; //y0
@@ -118,16 +151,16 @@ fn cell_verts(num_verts: usize) -> Vec<f32> {
 }
 
 // this function is an absolute disaster
-fn cell_colors(cell_board: &Vec<Vec<u8>>) -> Vec<f32> {
-    let total_cells: usize = cell_board.len() * cell_board[0].len();
-    let num_verts: usize = total_cells * 2 * 3 * 2;
-    let num_colors: usize = num_verts * 2;
+fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<f32> {
+    let time_steps = cell_board.len();
+    let universe_width = cell_board[0].len();
+    let num_colors: usize = time_steps * universe_width * 2 * 3 * 2 * 2;
 
     let mut colors = vec![0.0; num_colors];
 
     for i in 0..cell_board.len() {
         for j in 0..cell_board[i].len() {
-            let idx = (i + (j * MAX_TIME_STEPS)) * 24;
+            let idx = (i + (j * time_steps)) * 24;
             let cell = cell_board[i][j] as usize;
 
             colors[idx + 0] = COLORS[cell][0];
@@ -178,39 +211,9 @@ pub fn start() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<WebGl2RenderingContext>()?;
 
-    let vert_shader = compile_shader(
-        &gl,
-        WebGl2RenderingContext::VERTEX_SHADER,
-        r##"#version 300 es
- 
-        in vec4 position;
-        in vec4 cellType;
+    let vert_shader = compile_shader(&gl, WebGl2RenderingContext::VERTEX_SHADER, VERT_SHADER)?;
 
-        out vec4 fragColor;
-
-        void main() {
-            fragColor = cellType;
-            gl_Position = position;
-        }
-        "##,
-    )?;
-
-    let frag_shader = compile_shader(
-        &gl,
-        WebGl2RenderingContext::FRAGMENT_SHADER,
-        r##"#version 300 es
-    
-        precision highp float;
-
-        in vec4 fragColor;
-
-        out vec4 outColor;
-        
-        void main() {
-            outColor = fragColor;
-        }
-        "##,
-    )?;
+    let frag_shader = compile_shader(&gl, WebGl2RenderingContext::FRAGMENT_SHADER, FRAG_SHADER)?;
     let program = link_program(&gl, &vert_shader, &frag_shader)?;
     gl.use_program(Some(&program));
 
@@ -220,11 +223,13 @@ pub fn start() -> Result<(), JsValue> {
     let vert_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
     let cell_type_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
 
-    let total_cells: usize = UNIVERSE_WIDTH * MAX_TIME_STEPS;
-    let num_verts: usize = total_cells * 2 * 3 * 2;
+    let num_cell_types = 10;
+    let universe_width: usize = 64;
+    let max_time_steps: usize = 128;
+    let rule_density: f32 = 0.4;
 
-    let vertices: Vec<f32> = cell_verts(num_verts);
-    let cell_types = ca(UNIVERSE_WIDTH, MAX_TIME_STEPS, NUM_CELL_TYPES);
+    let vertices: Vec<f32> = cell_verts(universe_width, max_time_steps);
+    let cell_types = ca(universe_width, max_time_steps, num_cell_types, rule_density);
 
     // ************ VERTS
     let vert_array = {
@@ -285,13 +290,6 @@ pub fn start() -> Result<(), JsValue> {
     );
     gl.enable_vertex_attrib_array(cell_type_attribute_location as u32);
     gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, None);
-
-    // may need this later
-    // let vao = gl
-    //     .create_vertex_array()
-    //     .ok_or("Could not create vertex array object")?;
-    // gl.bind_vertex_array(Some(&vao));
-    // gl.bind_vertex_array(Some(&vao));
 
     let vert_count = (vertices.len() / 2) as i32;
     draw(&gl, vert_count);
