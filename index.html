@@ -2,11 +2,31 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>rust wasm test</title>
+  <title>singing cells</title>
 </head>
 
 <body>
   <canvas id="canvas" height="1000" width="500"></canvas>
+  <br>
+
+  <label for="numCellTypes">Number of cell types</label>
+  <input type="number" id="numCellTypes" name="numCellTypes">
+  <br>
+
+  <label for="universeWidth">CA size</label>
+  <input type="number" id="universeWidth" name="universeWidth">
+  <br>
+
+  <label for="maxTimeSteps">Number of time steps</label>
+  <input type="number" id="maxTimeSteps" name="maxTimeSteps">
+  <br>
+
+  <label for="ruleDensity">Rule Density</label>
+  <input type="range" id="ruleDensity" name="ruleDensity" min="0" max="1" step="0.01">
+  <br>
+
+  <button id="renderButton">Render</button>
+  <br>
 </body>
 
 </html>

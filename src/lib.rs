@@ -1,16 +1,3 @@
-const COLORS: [[f32; 4]; 10] = [
-    [0.0, 0.0, 0.0, 1.0],
-    [0.0, 1.0, 0.0, 1.0],
-    [0.0, 0.0, 1.0, 1.0],
-    [1.0, 0.0, 1.0, 1.0],
-    [0.0, 1.0, 1.0, 1.0],
-    [0.0, 0.5, 0.5, 1.0],
-    [0.5, 1.0, 0.0, 1.0],
-    [0.5, 0.0, 1.0, 1.0],
-    [0.22, 0.1, 0.8, 1.0],
-    [0.7, 0.1, 0.2, 1.0],
-];
-
 const VERT_SHADER: &str = r##"#version 300 es
     in vec4 position;
     in vec4 cellType;
@@ -38,10 +25,11 @@ const FRAG_SHADER: &str = r##"#version 300 es
 mod utils;
 
 use itertools::Itertools;
-use js_sys::{Math::random, WebAssembly};
+use js_sys::WebAssembly;
 use std::collections::BTreeSet;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
+// use js_sys::{Math::random, WebAssembly};
 
 macro_rules! log {
     ( $( $t:tt )* ) => {
@@ -60,7 +48,7 @@ fn gen_rule_table(n: u8, width: usize, rule_density: f32) -> Vec<u8> {
     while to_remove.len() != ((width as f32) * (1.0 - rule_density)) as usize {
         to_remove.insert(gen_range(0, width as u8) as usize);
     }
-    
+
     to_remove.iter().for_each(|&x| table[x] = 0);
 
     table
@@ -86,6 +74,14 @@ fn next_generation(rule_table: &Vec<u8>, cell_board: &mut Vec<Vec<u8>>) {
         .circular_tuple_windows::<(_, _, _)>()
         .zip(new_state_iter)
         .for_each(|((x, y, z), s)| *s = rule_table[(x + y + z) as usize]);
+}
+
+// insane workaround
+// probably due to something not linking properly
+// hope to fix in the future
+#[wasm_bindgen(inline_js = "export function random() { return Math.random(); }")]
+extern "C" {
+    fn random() -> f64;
 }
 
 fn ca(
@@ -152,6 +148,19 @@ fn cell_verts(universe_width: usize, time_steps: usize) -> Vec<f32> {
 
 // this function is an absolute disaster
 fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<f32> {
+    let color_palette: [[f32; 4]; 10] = [
+        [0.0, 0.0, 0.0, 1.0],
+        [0.0, 1.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0, 1.0],
+        [1.0, 0.0, 1.0, 1.0],
+        [0.0, 1.0, 1.0, 1.0],
+        [0.0, 0.5, 0.5, 1.0],
+        [0.5, 1.0, 0.0, 1.0],
+        [0.5, 0.0, 1.0, 1.0],
+        [0.22, 0.1, 0.8, 1.0],
+        [0.7, 0.1, 0.2, 1.0],
+    ];
+
     let time_steps = cell_board.len();
     let universe_width = cell_board[0].len();
     let num_colors: usize = time_steps * universe_width * 2 * 3 * 2 * 2;
@@ -163,43 +172,48 @@ fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<f32> {
             let idx = (i + (j * time_steps)) * 24;
             let cell = cell_board[i][j] as usize;
 
-            colors[idx + 0] = COLORS[cell][0];
-            colors[idx + 1] = COLORS[cell][1];
-            colors[idx + 2] = COLORS[cell][2];
-            colors[idx + 3] = COLORS[cell][3];
+            colors[idx + 0] = color_palette[cell][0];
+            colors[idx + 1] = color_palette[cell][1];
+            colors[idx + 2] = color_palette[cell][2];
+            colors[idx + 3] = color_palette[cell][3];
 
-            colors[idx + 4] = COLORS[cell][0];
-            colors[idx + 5] = COLORS[cell][1];
-            colors[idx + 6] = COLORS[cell][2];
-            colors[idx + 7] = COLORS[cell][3];
+            colors[idx + 4] = color_palette[cell][0];
+            colors[idx + 5] = color_palette[cell][1];
+            colors[idx + 6] = color_palette[cell][2];
+            colors[idx + 7] = color_palette[cell][3];
 
-            colors[idx + 8] = COLORS[cell][0];
-            colors[idx + 9] = COLORS[cell][1];
-            colors[idx + 10] = COLORS[cell][2];
-            colors[idx + 11] = COLORS[cell][3];
+            colors[idx + 8] = color_palette[cell][0];
+            colors[idx + 9] = color_palette[cell][1];
+            colors[idx + 10] = color_palette[cell][2];
+            colors[idx + 11] = color_palette[cell][3];
 
-            colors[idx + 12] = COLORS[cell][0];
-            colors[idx + 13] = COLORS[cell][1];
-            colors[idx + 14] = COLORS[cell][2];
-            colors[idx + 15] = COLORS[cell][3];
+            colors[idx + 12] = color_palette[cell][0];
+            colors[idx + 13] = color_palette[cell][1];
+            colors[idx + 14] = color_palette[cell][2];
+            colors[idx + 15] = color_palette[cell][3];
 
-            colors[idx + 16] = COLORS[cell][0];
-            colors[idx + 17] = COLORS[cell][1];
-            colors[idx + 18] = COLORS[cell][2];
-            colors[idx + 19] = COLORS[cell][3];
+            colors[idx + 16] = color_palette[cell][0];
+            colors[idx + 17] = color_palette[cell][1];
+            colors[idx + 18] = color_palette[cell][2];
+            colors[idx + 19] = color_palette[cell][3];
 
-            colors[idx + 20] = COLORS[cell][0];
-            colors[idx + 21] = COLORS[cell][1];
-            colors[idx + 22] = COLORS[cell][2];
-            colors[idx + 23] = COLORS[cell][3];
+            colors[idx + 20] = color_palette[cell][0];
+            colors[idx + 21] = color_palette[cell][1];
+            colors[idx + 22] = color_palette[cell][2];
+            colors[idx + 23] = color_palette[cell][3];
         }
     }
 
     colors
 }
 
-#[wasm_bindgen(start)]
-pub fn start() -> Result<(), JsValue> {
+#[wasm_bindgen]
+pub fn start(
+    num_cell_types: u8,
+    universe_width: usize,
+    max_time_steps: usize,
+    rule_density: f32,
+) -> Result<(), JsValue> {
     utils::set_panic_hook();
 
     let document = web_sys::window().unwrap().document().unwrap();
@@ -212,8 +226,8 @@ pub fn start() -> Result<(), JsValue> {
         .dyn_into::<WebGl2RenderingContext>()?;
 
     let vert_shader = compile_shader(&gl, WebGl2RenderingContext::VERTEX_SHADER, VERT_SHADER)?;
-
     let frag_shader = compile_shader(&gl, WebGl2RenderingContext::FRAGMENT_SHADER, FRAG_SHADER)?;
+
     let program = link_program(&gl, &vert_shader, &frag_shader)?;
     gl.use_program(Some(&program));
 
@@ -222,11 +236,6 @@ pub fn start() -> Result<(), JsValue> {
 
     let vert_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
     let cell_type_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
-
-    let num_cell_types = 10;
-    let universe_width: usize = 64;
-    let max_time_steps: usize = 128;
-    let rule_density: f32 = 0.4;
 
     let vertices: Vec<f32> = cell_verts(universe_width, max_time_steps);
     let cell_types = ca(universe_width, max_time_steps, num_cell_types, rule_density);
@@ -304,7 +313,7 @@ fn draw(gl: &WebGl2RenderingContext, vert_count: i32) {
     gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, vert_count);
 }
 
-pub fn compile_shader(
+fn compile_shader(
     gl: &WebGl2RenderingContext,
     shader_type: u32,
     source: &str,
@@ -328,7 +337,7 @@ pub fn compile_shader(
     }
 }
 
-pub fn link_program(
+fn link_program(
     gl: &WebGl2RenderingContext,
     vert_shader: &WebGlShader,
     frag_shader: &WebGlShader,
