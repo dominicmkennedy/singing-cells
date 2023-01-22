@@ -1,11 +1,11 @@
 const VERT_SHADER: &str = r##"#version 300 es
     in vec4 position;
-    in vec4 cellType;
+    in uint cellTypeVert;
 
-    out vec4 fragColor;
+    flat out uint cellTypeFrag;
 
     void main() {
-        fragColor = cellType;
+        cellTypeFrag = cellTypeVert;
         gl_Position = position;
     }
     "##;
@@ -13,12 +13,31 @@ const VERT_SHADER: &str = r##"#version 300 es
 const FRAG_SHADER: &str = r##"#version 300 es
     precision highp float;
 
-    in vec4 fragColor;
+    const vec4 COLOR_PALETTE[16] = vec4[16](
+        vec4(0.000, 0.000, 0.000, 1.000),
+        vec4(0.889, 0.058, 0.759, 1.000),
+        vec4(0.089, 0.929, 0.459, 1.000),
+        vec4(0.250, 0.195, 0.681, 1.000),
+        vec4(0.728, 0.664, 0.998, 1.000),
+        vec4(0.197, 0.756, 0.763, 1.000),
+        vec4(1.000, 1.000, 1.000, 1.000),
+        vec4(0.478, 0.142, 0.241, 1.000),
+        vec4(0.907, 0.008, 0.000, 1.000),
+        vec4(0.935, 0.890, 0.023, 1.000),
+        vec4(0.100, 0.336, 0.283, 1.000),
+        vec4(0.999, 0.582, 0.617, 1.000),
+        vec4(0.416, 0.539, 0.154, 1.000),
+        vec4(0.022, 0.499, 0.758, 1.000),
+        vec4(0.433, 0.307, 0.140, 1.000),
+        vec4(0.787, 0.562, 0.300, 1.000)
+        );
+
+    flat in uint cellTypeFrag;
 
     out vec4 outColor;
         
     void main() {
-        outColor = fragColor;
+        outColor = COLOR_PALETTE[cellTypeFrag];
     }
     "##;
 
@@ -89,7 +108,7 @@ fn ca(
     max_time_steps: usize,
     num_cell_types: u8,
     rule_density: f32,
-) -> Vec<f32> {
+) -> Vec<u32> {
     let rule_table_width: usize = (((num_cell_types as usize) - 1) * 3) + 1;
 
     // rule table
@@ -147,60 +166,24 @@ fn cell_verts(universe_width: usize, time_steps: usize) -> Vec<f32> {
 }
 
 // this function is an absolute disaster
-fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<f32> {
-    let color_palette: [[f32; 4]; 10] = [
-        [0.0, 0.0, 0.0, 1.0],
-        [0.0, 1.0, 0.0, 1.0],
-        [0.0, 0.0, 1.0, 1.0],
-        [1.0, 0.0, 1.0, 1.0],
-        [0.0, 1.0, 1.0, 1.0],
-        [0.0, 0.5, 0.5, 1.0],
-        [0.5, 1.0, 0.0, 1.0],
-        [0.5, 0.0, 1.0, 1.0],
-        [0.22, 0.1, 0.8, 1.0],
-        [0.7, 0.1, 0.2, 1.0],
-    ];
-
+fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<u32> {
     let time_steps = cell_board.len();
     let universe_width = cell_board[0].len();
-    let num_colors: usize = time_steps * universe_width * 2 * 3 * 2 * 2;
+    let num_colors: usize = time_steps * universe_width * 2 * 3;
 
-    let mut colors = vec![0.0; num_colors];
+    let mut colors = vec![0; num_colors];
 
     for i in 0..cell_board.len() {
         for j in 0..cell_board[i].len() {
-            let idx = (i + (j * time_steps)) * 24;
-            let cell = cell_board[i][j] as usize;
+            let idx = (i + (j * time_steps)) * 6;
+            let cell = cell_board[i][j];
 
-            colors[idx + 0] = color_palette[cell][0];
-            colors[idx + 1] = color_palette[cell][1];
-            colors[idx + 2] = color_palette[cell][2];
-            colors[idx + 3] = color_palette[cell][3];
-
-            colors[idx + 4] = color_palette[cell][0];
-            colors[idx + 5] = color_palette[cell][1];
-            colors[idx + 6] = color_palette[cell][2];
-            colors[idx + 7] = color_palette[cell][3];
-
-            colors[idx + 8] = color_palette[cell][0];
-            colors[idx + 9] = color_palette[cell][1];
-            colors[idx + 10] = color_palette[cell][2];
-            colors[idx + 11] = color_palette[cell][3];
-
-            colors[idx + 12] = color_palette[cell][0];
-            colors[idx + 13] = color_palette[cell][1];
-            colors[idx + 14] = color_palette[cell][2];
-            colors[idx + 15] = color_palette[cell][3];
-
-            colors[idx + 16] = color_palette[cell][0];
-            colors[idx + 17] = color_palette[cell][1];
-            colors[idx + 18] = color_palette[cell][2];
-            colors[idx + 19] = color_palette[cell][3];
-
-            colors[idx + 20] = color_palette[cell][0];
-            colors[idx + 21] = color_palette[cell][1];
-            colors[idx + 22] = color_palette[cell][2];
-            colors[idx + 23] = color_palette[cell][3];
+            colors[idx + 0] = cell as u32;
+            colors[idx + 1] = cell as u32;
+            colors[idx + 2] = cell as u32;
+            colors[idx + 3] = cell as u32;
+            colors[idx + 4] = cell as u32;
+            colors[idx + 5] = cell as u32;
         }
     }
 
@@ -242,7 +225,7 @@ pub fn render(
     rule_density: f32,
 ) -> Result<(), JsValue> {
     let position_attribute_location = gl.get_attrib_location(&program, "position");
-    let cell_type_attribute_location = gl.get_attrib_location(&program, "cellType");
+    let cell_type_attribute_location = gl.get_attrib_location(&program, "cellTypeVert");
 
     let vert_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
     let cell_type_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
@@ -284,7 +267,7 @@ pub fn render(
             .dyn_into::<WebAssembly::Memory>()?
             .buffer();
         let cell_type_location = cell_types.as_ptr() as u32 / 4;
-        js_sys::Float32Array::new(&memory_buffer).subarray(
+        js_sys::Uint32Array::new(&memory_buffer).subarray(
             cell_type_location,
             cell_type_location + cell_types.len() as u32,
         )
@@ -299,11 +282,10 @@ pub fn render(
         &cell_type_array,
         WebGl2RenderingContext::DYNAMIC_DRAW,
     );
-    gl.vertex_attrib_pointer_with_i32(
+    gl.vertex_attrib_i_pointer_with_i32(
         cell_type_attribute_location as u32,
-        4,
-        WebGl2RenderingContext::FLOAT,
-        false,
+        1,
+        WebGl2RenderingContext::UNSIGNED_INT,
         0,
         0,
     );
