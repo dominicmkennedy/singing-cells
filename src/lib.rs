@@ -208,29 +208,39 @@ fn cell_colors(cell_board: &mut Vec<Vec<u8>>) -> Vec<f32> {
 }
 
 #[wasm_bindgen]
-pub fn start(
-    num_cell_types: u8,
-    universe_width: usize,
-    max_time_steps: usize,
-    rule_density: f32,
-) -> Result<(), JsValue> {
+pub fn get_gl_context() -> Result<WebGl2RenderingContext, JsValue> {
     utils::set_panic_hook();
 
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
 
-    let gl = canvas
+    Ok(canvas
         .get_context("webgl2")?
         .unwrap()
-        .dyn_into::<WebGl2RenderingContext>()?;
+        .dyn_into::<WebGl2RenderingContext>()?)
+}
 
+#[wasm_bindgen]
+pub fn get_program(gl: WebGl2RenderingContext) -> Result<WebGlProgram, JsValue> {
     let vert_shader = compile_shader(&gl, WebGl2RenderingContext::VERTEX_SHADER, VERT_SHADER)?;
     let frag_shader = compile_shader(&gl, WebGl2RenderingContext::FRAGMENT_SHADER, FRAG_SHADER)?;
 
     let program = link_program(&gl, &vert_shader, &frag_shader)?;
     gl.use_program(Some(&program));
 
+    Ok(program)
+}
+
+#[wasm_bindgen]
+pub fn render(
+    gl: WebGl2RenderingContext,
+    program: WebGlProgram,
+    num_cell_types: u8,
+    universe_width: usize,
+    max_time_steps: usize,
+    rule_density: f32,
+) -> Result<(), JsValue> {
     let position_attribute_location = gl.get_attrib_location(&program, "position");
     let cell_type_attribute_location = gl.get_attrib_location(&program, "cellType");
 
