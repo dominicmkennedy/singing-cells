@@ -1,32 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
+<html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <title>singing cells</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Singing Cells</title>
 </head>
 
 <body>
-  <canvas id="canvas" height="1000" width="500"></canvas>
-  <br>
+  <div class="vh-100 row g-0">
+    <div class="col-lg-9 container h-100 pt-2 pb-2" id="canvasContainer" style="display: none;">
+      <canvas id="canvas" class="h-100 w-100">
+    </div>
 
-  <label for="numCellTypes">Number of cell types</label>
-  <input type="number" id="numCellTypes" name="numCellTypes">
-  <br>
+    <div class="col-lg-3 container pt-2 pb-2">
+      <div class="card">
+        <div class="card-body">
+          <h3 class="card-title">Singing Cells</h3>
+          <h6 class="card-subtitle mb-2 text-muted">A project by Dominic Kennedy</h6>
 
-  <label for="universeWidth">CA size</label>
-  <input type="number" id="universeWidth" name="universeWidth">
-  <br>
+          <form class="needs-validation" id="inputForm" action="javascript:void(0);" novalidate>
+            <div class="form-floating mb-2">
+              <input type="number" class="form-control" id="numCellTypes" name="numCellTypes" min="2" max="16" required>
+              <label for="numCellTypes">Number of cell types</label>
+            </div>
 
-  <label for="maxTimeSteps">Number of time steps</label>
-  <input type="number" id="maxTimeSteps" name="maxTimeSteps">
-  <br>
+            <div class="form-floating mb-2">
+              <input type="number" class="form-control" id="universeWidth" name="universeWidth" min="1" required>
+              <label for="universeWidth">CA size</label>
+            </div>
 
-  <label for="ruleDensity">Rule Density</label>
-  <input type="range" id="ruleDensity" name="ruleDensity" min="0" max="1" step="0.01">
-  <br>
+            <div class="form-floating mb-2">
+              <input type="number" class="form-control" id="maxTimeSteps" name="maxTimeSteps" min="1" required>
+              <label for="maxTimeSteps">Number of time steps</label>
+            </div>
 
-  <button id="renderButton">Render</button>
-  <br>
+            <div class="mb-2">
+              <label for="ruleDensity" class="form-label">Rule Density</label>
+              <input type="range" class="form-range" id="ruleDensity" name="ruleDensity" min="0" max="1" step="0.01">
+            </div>
+
+            <div class="mb-2">
+              <button class="btn btn-primary" type="submit">Generate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

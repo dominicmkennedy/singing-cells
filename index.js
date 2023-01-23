@@ -1,21 +1,34 @@
 import { render, get_gl_context, get_program } from './pkg';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const gl = get_gl_context();
 const program = get_program(gl);
 
-const renderButton = document.getElementById('renderButton');
+const inputForm = document.getElementById('inputForm');
+const canvasContainer = document.getElementById('canvasContainer');
 const numCellTypesInput = document.getElementById('numCellTypes');
 const universeWidthInput = document.getElementById('universeWidth');
 const maxTimeStepsInput = document.getElementById('maxTimeSteps');
 const ruleDensityInput = document.getElementById('ruleDensity');
 
+inputForm.addEventListener('submit', function(event) {
+  if (!inputForm.checkValidity()) {
+    event.preventDefault()
+    event.stopPropagation()
+  } else {
+    canvasContainer.style.display = 'block';
+    render_js();
+  }
+
+  inputForm.classList.add('was-validated')
+}, false)
+
 function render_js() {
-  let numCellTypes = Number(numCellTypesInput.value);
-  let universeWidth = Number(universeWidthInput.value);
-  let maxTimeSteps = Number(maxTimeStepsInput.value);
-  let ruleDensity = Number(ruleDensityInput.value);
-
-  render(gl, program, numCellTypes, universeWidth, maxTimeSteps, ruleDensity);
+  render(
+    gl,
+    program,
+    Number(numCellTypesInput.value),
+    Number(universeWidthInput.value),
+    Number(maxTimeStepsInput.value),
+    Number(ruleDensityInput.value));
 }
-
-renderButton.addEventListener('click', render_js);
