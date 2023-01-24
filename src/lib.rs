@@ -221,17 +221,46 @@ pub fn render(
     program: WebGlProgram,
     num_cell_types: u8,
     universe_width: usize,
-    max_time_steps: usize,
     rule_density: f32,
 ) -> Result<(), JsValue> {
+    let device_pixel_ratio = web_sys::window().unwrap().device_pixel_ratio();
+    let canvas_width = (gl
+        .canvas()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap()
+        .client_width() as f64
+        * device_pixel_ratio) as i32;
+    let canvas_height = (gl
+        .canvas()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap()
+        .client_height() as f64
+        * device_pixel_ratio) as i32;
+    gl.canvas()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap()
+        .set_width(canvas_width as u32);
+    gl.canvas()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap()
+        .set_height(canvas_height as u32);
+    gl.viewport(0, 0, canvas_width, canvas_height);
+
+    let max_time_steps =
+        ((canvas_height as f64 * universe_width as f64) / canvas_width as f64) as usize;
+
+    let vertices: Vec<f32> = cell_verts(universe_width, max_time_steps);
+    let cell_types = ca(universe_width, max_time_steps, num_cell_types, rule_density);
+
     let position_attribute_location = gl.get_attrib_location(&program, "position");
     let cell_type_attribute_location = gl.get_attrib_location(&program, "cellTypeVert");
 
     let vert_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
     let cell_type_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
-
-    let vertices: Vec<f32> = cell_verts(universe_width, max_time_steps);
-    let cell_types = ca(universe_width, max_time_steps, num_cell_types, rule_density);
 
     // ************ VERTS
     let vert_array = {
@@ -298,6 +327,7 @@ pub fn render(
     Ok(())
 }
 
+// inline this into the render function
 fn draw(gl: &WebGl2RenderingContext, vert_count: i32) {
     gl.clear_color(0.0, 0.0, 0.0, 1.0);
     gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);

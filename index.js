@@ -8,7 +8,6 @@ const inputForm = document.getElementById('inputForm');
 const canvasContainer = document.getElementById('canvasContainer');
 const numCellTypesInput = document.getElementById('numCellTypes');
 const universeWidthInput = document.getElementById('universeWidth');
-const maxTimeStepsInput = document.getElementById('maxTimeSteps');
 const ruleDensityInput = document.getElementById('ruleDensity');
 
 inputForm.addEventListener('submit', function(event) {
@@ -29,6 +28,5 @@ function render_js() {
     program,
     Number(numCellTypesInput.value),
     Number(universeWidthInput.value),
-    Number(maxTimeStepsInput.value),
     Number(ruleDensityInput.value));
 }
