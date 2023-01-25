@@ -9,6 +9,11 @@ const canvasContainer = document.getElementById('canvasContainer');
 const numCellTypesInput = document.getElementById('numCellTypes');
 const universeWidthInput = document.getElementById('universeWidth');
 const ruleDensityInput = document.getElementById('ruleDensity');
+const ruleDensityOutput = document.getElementById('ruleDensityOutput');
+
+ruleDensityInput.oninput = function() {
+  ruleDensityOutput.value = ruleDensityInput.value;
+}
 
 inputForm.addEventListener('submit', function(event) {
   if (!inputForm.checkValidity()) {
