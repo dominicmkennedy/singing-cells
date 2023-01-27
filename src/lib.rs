@@ -9,49 +9,6 @@
 // todo consider wrapping the universe in a ref cell
 // aliviating extra cloning from the next_generation fn
 
-const VERT_SHADER: &str = r##"#version 300 es
-    in vec4 position;
-    in uint cellTypeVert;
-
-    flat out uint cellTypeFrag;
-
-    void main() {
-        cellTypeFrag = cellTypeVert;
-        gl_Position = position;
-    }
-    "##;
-
-const FRAG_SHADER: &str = r##"#version 300 es
-    precision highp float;
-
-    const vec4 COLOR_PALETTE[16] = vec4[16](
-        vec4(0.000, 0.000, 0.000, 1.000),
-        vec4(0.889, 0.058, 0.759, 1.000),
-        vec4(0.089, 0.929, 0.459, 1.000),
-        vec4(0.250, 0.195, 0.681, 1.000),
-        vec4(0.728, 0.664, 0.998, 1.000),
-        vec4(0.197, 0.756, 0.763, 1.000),
-        vec4(1.000, 1.000, 1.000, 1.000),
-        vec4(0.478, 0.142, 0.241, 1.000),
-        vec4(0.907, 0.008, 0.000, 1.000),
-        vec4(0.935, 0.890, 0.023, 1.000),
-        vec4(0.100, 0.336, 0.283, 1.000),
-        vec4(0.999, 0.582, 0.617, 1.000),
-        vec4(0.416, 0.539, 0.154, 1.000),
-        vec4(0.022, 0.499, 0.758, 1.000),
-        vec4(0.433, 0.307, 0.140, 1.000),
-        vec4(0.787, 0.562, 0.300, 1.000)
-        );
-
-    flat in uint cellTypeFrag;
-
-    out vec4 outColor;
-        
-    void main() {
-        outColor = COLOR_PALETTE[cellTypeFrag];
-    }
-    "##;
-
 mod utils;
 
 use itertools::{iproduct, Itertools};
@@ -157,7 +114,6 @@ pub struct MyGL {
 #[wasm_bindgen]
 impl MyGL {
     #[wasm_bindgen(constructor)]
-    // pub fn new(canvas: web_sys::HtmlCanvasElement, vert_shader: &str, frag_shader: &str) -> MyGL {
     pub fn new(canvas: web_sys::HtmlCanvasElement) -> MyGL {
         let context = Self::get_gl_context(canvas);
         let device_pixel_ratio = web_sys::window().unwrap().device_pixel_ratio();
@@ -176,9 +132,7 @@ impl MyGL {
             .client_height() as f64
             * device_pixel_ratio) as i32;
         let x = MyGL {
-            // program: Self::get_program(&context, vert_shader, frag_shader),
-            program: Self::get_program(&context, VERT_SHADER, FRAG_SHADER),
-            // device_pixel_ratio: web_sys::window().unwrap().device_pixel_ratio(),
+            program: Self::get_program(&context),
             device_pixel_ratio,
             context,
             canvas_width,
@@ -187,27 +141,6 @@ impl MyGL {
         x.set_canvas_res();
         x
     }
-
-    // fn get_canvas_res(&self) -> (i32, i32) {
-    //     (
-    //         (self
-    //             .context
-    //             .canvas()
-    //             .unwrap()
-    //             .dyn_into::<web_sys::HtmlCanvasElement>()
-    //             .unwrap()
-    //             .client_width() as f64
-    //             * self.device_pixel_ratio) as i32,
-    //         (self
-    //             .context
-    //             .canvas()
-    //             .unwrap()
-    //             .dyn_into::<web_sys::HtmlCanvasElement>()
-    //             .unwrap()
-    //             .client_height() as f64
-    //             * self.device_pixel_ratio) as i32,
-    //     )
-    // }
 
     fn set_canvas_res(&self) {
         self.context
@@ -235,16 +168,19 @@ impl MyGL {
             .unwrap()
     }
 
-    fn get_program(
-        gl: &WebGl2RenderingContext,
-        vert_shader: &str,
-        frag_shader: &str,
-    ) -> WebGlProgram {
-        let vert_shader =
-            Self::compile_shader(&gl, WebGl2RenderingContext::VERTEX_SHADER, vert_shader).unwrap();
-        let frag_shader =
-            Self::compile_shader(&gl, WebGl2RenderingContext::FRAGMENT_SHADER, frag_shader)
-                .unwrap();
+    fn get_program(gl: &WebGl2RenderingContext) -> WebGlProgram {
+        let vert_shader = Self::compile_shader(
+            &gl,
+            WebGl2RenderingContext::VERTEX_SHADER,
+            include_str!("./shaders/CA.vert"),
+        )
+        .unwrap();
+        let frag_shader = Self::compile_shader(
+            &gl,
+            WebGl2RenderingContext::FRAGMENT_SHADER,
+            include_str!("./shaders/CA.frag"),
+        )
+        .unwrap();
 
         let program = Self::link_program(&gl, &vert_shader, &frag_shader).unwrap();
         gl.use_program(Some(&program));
