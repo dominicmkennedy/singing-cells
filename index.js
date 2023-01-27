@@ -1,12 +1,13 @@
-import { render, get_gl_context, get_program } from './pkg';
+import { render, MyGL } from './pkg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 const seedrandom = require('seedrandom');
 
-const gl = get_gl_context();
-const program = get_program(gl);
+// const gl = get_gl_context();
+// const program = get_program(gl);
 
 const inputForm = document.getElementById('inputForm');
 const canvasContainer = document.getElementById('canvasContainer');
+const canvas = document.getElementById('canvas');
 const numCellTypesInput = document.getElementById('numCellTypes');
 const universeWidthInput = document.getElementById('universeWidth');
 const ruleDensityInput = document.getElementById('ruleDensity');
@@ -27,6 +28,7 @@ inputForm.addEventListener('submit', (event) => {
     }
     seedrandom(seedInput.value, { global: true });
     canvasContainer.style.display = 'block';
+    cancelAnimationFrame(requestAnimationFrame(()=>{})-1);
     render_js();
   }
 
@@ -35,8 +37,10 @@ inputForm.addEventListener('submit', (event) => {
 
 function render_js() {
   render(
-    gl,
-    program,
+    // x,
+    canvas,
+    // gl,
+    // program,
     Number(numCellTypesInput.value),
     Number(universeWidthInput.value),
     Number(ruleDensityInput.value));
