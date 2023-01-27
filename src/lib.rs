@@ -12,19 +12,21 @@ macro_rules! log {
     }
 }
 
-#[wasm_bindgen]
-pub fn render(
+#[wasm_bindgen(js_name = generateCa)]
+pub fn generate_ca(
     canvas: web_sys::HtmlCanvasElement,
     num_cell_types: u8,
     width: usize,
     rule_density: f32,
+    animate: bool,
 ) -> Result<(), JsValue> {
     utils::set_panic_hook();
 
     let gl = gl::GL::new(canvas);
+    let num_steps = (gl.get_aspect_ratio() * width as f64) as usize;
     let mut ca = ca::CA::new(
         width,
-        (gl.get_aspect_ratio() * width as f64) as usize,
+        num_steps,
         num_cell_types,
         rule_density,
     );
@@ -33,32 +35,35 @@ pub fn render(
     let (ct_ptr, ct_len) = ca.cell_types_ptr();
     let num_verts = ca.num_verts();
 
-    // (0..max_time_steps - 1).for_each(|_| c.next_generation());
-    // c.update_cell_colors();
-    // x.attach_cell_type_ptr(c.cell_types.as_ptr(), c.cell_types.len())?;
+    if animate {
+        let window = web_sys::window().unwrap();
+        let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+        let g = f.clone();
 
-    let window = web_sys::window().unwrap();
-    let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
-    let g = f.clone();
+        let render_loop_closure = move || {
+            ca.update_cell_colors();
+            gl.attach_cell_type_ptr(ct_ptr, ct_len).unwrap();
+            gl.draw(num_verts);
+            ca.next_generation();
+            window
+                .request_animation_frame(f.borrow().as_ref().unwrap().as_ref().unchecked_ref())
+                .unwrap();
+            // let _ = f.borrow_mut().take();
+        };
 
-    let render_loop_closure = move || {
-        ca.update_cell_colors();
-        gl.attach_cell_type_ptr(ct_ptr, ct_len).unwrap();
-        gl.draw(num_verts);
-        ca.next_generation();
-        window
-            .request_animation_frame(f.borrow().as_ref().unwrap().as_ref().unchecked_ref())
+        *g.borrow_mut() = Some(Closure::wrap(
+            Box::new(render_loop_closure) as Box<dyn FnMut()>
+        ));
+        web_sys::window()
+            .unwrap()
+            .request_animation_frame(g.borrow().as_ref().unwrap().as_ref().unchecked_ref())
             .unwrap();
-        // let _ = f.borrow_mut().take();
-    };
-
-    *g.borrow_mut() = Some(Closure::wrap(
-        Box::new(render_loop_closure) as Box<dyn FnMut()>
-    ));
-    web_sys::window()
-        .unwrap()
-        .request_animation_frame(g.borrow().as_ref().unwrap().as_ref().unchecked_ref())
-        .unwrap();
+    } else {
+        (0..num_steps - 1).for_each(|_| ca.next_generation());
+        ca.update_cell_colors();
+        gl.attach_cell_type_ptr(ct_ptr, ct_len)?;
+        gl.draw(num_verts);
+    }
 
     Ok(())
 }
