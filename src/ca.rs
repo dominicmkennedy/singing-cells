@@ -1,5 +1,5 @@
 use itertools::{iproduct, Itertools};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, VecDeque};
 use wasm_bindgen::prelude::*;
 // use js_sys::Math::random;
 // including this makes js not run
@@ -17,7 +17,7 @@ pub struct CA {
     num_steps: usize,
     rule_table: Vec<u8>,
     universe: Vec<Vec<u8>>,
-    cell_types: Vec<u32>,
+    cell_types: VecDeque<u32>,
 }
 
 impl CA {
@@ -27,7 +27,7 @@ impl CA {
             num_steps,
             rule_table: Self::gen_rule_table(cell_types, rule_density),
             universe: Self::gen_init_universe(size, num_steps, cell_types),
-            cell_types: vec![0; size * num_steps * 6],
+            cell_types: VecDeque::from(vec![0; size * num_steps * 6]),
         }
     }
 
@@ -85,17 +85,39 @@ impl CA {
         (0..width).map(|_| Self::gen_range(0, n)).collect()
     }
 
-    pub fn update_cell_colors(&mut self) {
-        self.universe
+    // raw loop is bad but it's the fastest method I've tried
+    pub fn update_all_cell_colors(&mut self) {
+        for (i, cell) in self
+            .universe
             .iter()
             .flatten()
             .flat_map(|x| std::iter::repeat(*x as u32).take(6))
-            .zip(self.cell_types.iter_mut())
-            .for_each(|(u, ct)| *ct = u);
+            .enumerate()
+        {
+            self.cell_types[i] = cell as u32;
+        }
+    }
+
+    pub fn update_cell_colors(&mut self) {
+        self.cell_types
+            .iter_mut()
+            .zip(iproduct!(self.universe.last().unwrap().iter(), (0..6)))
+            .map(|(ct, (u, _))| *ct = *u as u32)
+            .count();
+        self.cell_types.rotate_left(self.size * 6);
+        self.cell_types.make_contiguous();
+
+        // self.cell_types.extend(
+        //     iproduct!(self.universe.last().unwrap().iter(), (0..6)).map(|(u, _)| *u as u32),
+        // );
+        // self.cell_types.drain(0..self.size * 6);
     }
 
     pub fn cell_types_ptr(&self) -> (*const u32, usize) {
-        (self.cell_types.as_ptr(), self.cell_types.len())
+        (
+            self.cell_types.as_slices().0.as_ptr(),
+            self.cell_types.len(),
+        )
     }
 
     fn gen_range(low: u8, high: u8) -> u8 {
