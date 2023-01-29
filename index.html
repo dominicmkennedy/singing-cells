@@ -31,8 +31,7 @@
             </div>
 
             <div class="mb-2">
-              <label for="ruleDensity" class="form-label">Rule Density: <output
-                  id="ruleDensityOutput"></output></label>
+              <label for="ruleDensity" class="form-label">Rule Density: <output id="ruleDensityOutput"></output></label>
               <input type="range" class="form-range" id="ruleDensity" name="ruleDensity" value="0.5" min="0" max="1"
                 step="0.01">
             </div>
@@ -51,12 +50,12 @@
                 <input class="form-check-input" id="animateOption" type="checkbox" checked>
               </div>
             </div>
-                
-            <div class="input-group mb-2" style="display: none;">
-            <label for="animationSpeed" class="form-label">Animation speed: <output
-                    id="animationSpeedOutput">0.5</output></label>
-                <input type="range" class="form-range" id="animationSpeed" name="animationSpeed" value="0.5" min="0" max="1"
-                  step="0.01">
+
+            <div class="input-group mb-2">
+              <label for="animationSpeed" class="form-label">Animation speed (fps): <output
+                  id="animationSpeedOutput"></output></label>
+              <input type="range" class="form-range" id="animationSpeed" name="animationSpeed" value="20" min="0"
+                max="60" step="1">
             </div>
 
             <div class="mb-2">

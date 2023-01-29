@@ -175,7 +175,7 @@ impl GL {
         Ok(())
     }
 
-    // TODO break this into two functions 
+    // TODO break this into two functions
     // so there's less messing with buffers between frames
     pub fn attach_cell_type_ptr(&self, ct_ptr: *const u32, ct_len: usize) -> Result<(), JsValue> {
         let cell_type_attribute_location = self

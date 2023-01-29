@@ -12,15 +12,19 @@ extern "C" {
     fn random() -> f64;
 }
 
+// #[wasm_bindgen]
 pub struct CA {
     size: usize,
-    num_steps: usize,
+    pub num_steps: usize,
     rule_table: Vec<u8>,
     universe: Vec<Vec<u8>>,
     cell_types: VecDeque<u32>,
+    // num_verts: i32,
 }
 
+// #[wasm_bindgen]
 impl CA {
+    // #[wasm_bindgen(constructor)]
     pub fn new(size: usize, num_steps: usize, cell_types: u8, rule_density: f32) -> CA {
         CA {
             size,
@@ -28,6 +32,7 @@ impl CA {
             rule_table: Self::gen_rule_table(cell_types, rule_density),
             universe: Self::gen_init_universe(size, num_steps, cell_types),
             cell_types: VecDeque::from(vec![0; size * num_steps * 6]),
+            // num_verts: (num_steps * size * 6) as i32,
         }
     }
 
@@ -68,6 +73,9 @@ impl CA {
     }
 
     //TODO reverify that this indeed works
+    //TODO write a one shot version of this function
+    //to speed up static CA generation 
+    //also then remove pub from num_steps
     pub fn next_generation(&mut self) {
         self.universe.rotate_left(1);
 
@@ -86,7 +94,7 @@ impl CA {
     }
 
     // raw loop is bad but it's the fastest method I've tried
-    pub fn update_all_cell_colors(&mut self) {
+    pub fn update_all_cell_colors(&mut self) -> (*const u32, usize) {
         for (i, cell) in self
             .universe
             .iter()
@@ -96,9 +104,13 @@ impl CA {
         {
             self.cell_types[i] = cell as u32;
         }
+        (
+            self.cell_types.as_slices().0.as_ptr(),
+            self.cell_types.len(),
+        )
     }
 
-    pub fn update_cell_colors(&mut self) {
+    pub fn update_cell_colors(&mut self) -> (*const u32, usize) {
         self.cell_types
             .iter_mut()
             .zip(iproduct!(self.universe.last().unwrap().iter(), (0..6)))
@@ -106,18 +118,15 @@ impl CA {
             .count();
         self.cell_types.rotate_left(self.size * 6);
         self.cell_types.make_contiguous();
+        (
+            self.cell_types.as_slices().0.as_ptr(),
+            self.cell_types.len(),
+        )
 
         // self.cell_types.extend(
         //     iproduct!(self.universe.last().unwrap().iter(), (0..6)).map(|(u, _)| *u as u32),
         // );
         // self.cell_types.drain(0..self.size * 6);
-    }
-
-    pub fn cell_types_ptr(&self) -> (*const u32, usize) {
-        (
-            self.cell_types.as_slices().0.as_ptr(),
-            self.cell_types.len(),
-        )
     }
 
     fn gen_range(low: u8, high: u8) -> u8 {
