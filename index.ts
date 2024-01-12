@@ -1,4 +1,4 @@
-import { GLandCA } from './pkg';
+import { GLandCA, play_sine_wave } from './pkg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import * as seedrandom from 'seedrandom';
 
@@ -14,6 +14,7 @@ const seedOption = <HTMLInputElement>document.getElementById('seedOption');
 const animateOption = <HTMLInputElement>document.getElementById('animateOption');
 const animationSpeed = <HTMLInputElement>document.getElementById('animationSpeed');
 const animationOutput = <HTMLInputElement>document.getElementById('animationSpeedOutput');
+const audioButton = <HTMLButtonElement>document.getElementById('audioButton');
 
 let frameNum = 0;
 let lastFrame = performance.now();
@@ -65,3 +66,7 @@ inputForm.addEventListener('submit', (event) => {
   }
   inputForm.classList.add('was-validated')
 }, false)
+
+audioButton.addEventListener('click', () => {
+  play_sine_wave()
+})

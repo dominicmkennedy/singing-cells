@@ -1,6 +1,7 @@
 mod ca;
 mod gl;
 mod utils;
+mod audio;
 
 use std::time::Duration;
 use wasm_bindgen::prelude::*;
