@@ -1,30 +1,16 @@
 use itertools::{iproduct, Itertools};
 use std::collections::{BTreeSet, VecDeque};
-use wasm_bindgen::prelude::*;
-// use js_sys::Math::random;
-// including this makes js not run
+use js_sys::Math::random;
 
-// insane workaround
-// probably due to something not linking properly
-// hope to fix in the future
-#[wasm_bindgen(inline_js = "export function random() { return Math.random(); }")]
-extern "C" {
-    fn random() -> f64;
-}
-
-// #[wasm_bindgen]
 pub struct CA {
     size: usize,
     pub num_steps: usize,
     rule_table: Vec<u8>,
     universe: Vec<Vec<u8>>,
     cell_types: VecDeque<u32>,
-    // num_verts: i32,
 }
 
-// #[wasm_bindgen]
 impl CA {
-    // #[wasm_bindgen(constructor)]
     pub fn new(size: usize, num_steps: usize, cell_types: u8, rule_density: f32) -> CA {
         CA {
             size,
@@ -32,7 +18,6 @@ impl CA {
             rule_table: Self::gen_rule_table(cell_types, rule_density),
             universe: Self::gen_init_universe(size, num_steps, cell_types),
             cell_types: VecDeque::from(vec![0; size * num_steps * 6]),
-            // num_verts: (num_steps * size * 6) as i32,
         }
     }
 
@@ -72,10 +57,9 @@ impl CA {
         table
     }
 
-    //TODO reverify that this indeed works
-    //TODO write a one shot version of this function
-    //to speed up static CA generation 
-    //also then remove pub from num_steps
+    // TODO reverify that this indeed works
+    // TODO write a one shot version of this function to speed up static CA generation;
+    // then remove pub from num_steps
     pub fn next_generation(&mut self) {
         self.universe.rotate_left(1);
 
@@ -118,15 +102,11 @@ impl CA {
             .count();
         self.cell_types.rotate_left(self.size * 6);
         self.cell_types.make_contiguous();
+
         (
             self.cell_types.as_slices().0.as_ptr(),
             self.cell_types.len(),
         )
-
-        // self.cell_types.extend(
-        //     iproduct!(self.universe.last().unwrap().iter(), (0..6)).map(|(u, _)| *u as u32),
-        // );
-        // self.cell_types.drain(0..self.size * 6);
     }
 
     fn gen_range(low: u8, high: u8) -> u8 {

@@ -1,5 +1,5 @@
 use js_sys::WebAssembly;
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 pub struct GL {
